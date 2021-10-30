@@ -7,7 +7,6 @@ import numpy as np
 
 from company import Company
 from pm import PM
-from ta import TA
 
 
 def create_stock_price_comparison_chart(tickers, start_input, end_input):
