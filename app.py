@@ -397,7 +397,7 @@ if option == 'Stock Price Comparison':
 #financial analysis
 if option == 'Financial Analysis':
     # sidebar
-    ticker_input = st.sidebar.selectbox(label='Enter Ticker for Financial Data:', options=Company.get_tickers(), help='Choose a single firm to further investigate in')
+    ticker_input = st.sidebar.selectbox(label='Enter Ticker for Financial Data:', options=Company.get_stock_tickers(), help='Choose a single firm to further investigate in')
     search_button = st.sidebar.button('Search')
     
     if search_button:
