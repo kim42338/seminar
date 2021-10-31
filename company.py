@@ -66,6 +66,13 @@ class Company:
         tickers = tickers.sort_values()
         return tickers        
 
+    @staticmethod
+    @st.cache(ttl=86400, persist=False)
+    def get_stock_tickers():
+        stock_df = pd.read_csv('STOCK_tickers.csv')
+        stock_tickers = stock_df['Symbol']
+        return stock_tickers
+    
     #overview
     def generate_overview_df(self):
         overview_df = pd.DataFrame(
