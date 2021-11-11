@@ -68,10 +68,8 @@ class Company:
 
     @staticmethod
     @st.cache(ttl=86400, persist=False)
-    def get_stock_tickers():
-        stock_df = pd.read_csv('STOCK_tickers.csv')
-        stock_tickers = stock_df['Symbol']
-        return stock_tickers
+    def get_sp500_tickers():
+        return si.tickers_sp500()
     
     #overview
     def generate_overview_df(self):
