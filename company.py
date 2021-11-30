@@ -14,7 +14,10 @@ class Company:
 
     @property
     def name(self):
-        return self.quote_data['longName']
+        try:
+            return self.quote_data['longName']
+        except:
+            return self.ticker
 
     @property
     def info(self):
