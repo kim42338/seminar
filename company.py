@@ -62,7 +62,9 @@ class Company:
         stock_tickers = stock_df['Symbol']
         etf_df = pd.read_csv('ETF_tickers.csv')
         etf_tickers = etf_df['SYMBOL']
-        tickers = pd.concat([stock_tickers, etf_tickers], axis=0).reset_index().iloc[:,1]
+        cryptocurrency_df = pd.read_csv('cryptocurrency_tickers.csv')
+        cryptocurrency_tickers = cryptocurrency_df['Symbol']
+        tickers = pd.concat([stock_tickers, etf_tickers, cryptocurrency_tickers], axis=0).reset_index().iloc[:,1]
         tickers = tickers.sort_values()
         return tickers        
 
