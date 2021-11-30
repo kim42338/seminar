@@ -13,7 +13,7 @@ def create_stock_price_comparison_chart(tickers, start_input, end_input):
     fig = go.Figure()
     for ticker in tickers:
         company = Company(ticker, start_input, end_input)
-        fig.add_trace(go.Scatter(x=company.price_data.index, y=company.price_data['adjclose'], name=company.name)) 
+        fig.add_trace(go.Scatter(x=company.price_data.index, y=np.log(company.price_data['adjclose']), name=company.name)) 
     fig.update_layout(
         margin = dict(
             l = 0,
