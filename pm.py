@@ -72,7 +72,7 @@ class PM:
         predicted_return = self.get_returns
         predicted_return_mean = predicted_return.mean() 
         covariance = predicted_return.cov() * 252
-        for i in range(10000):
+        for i in range(50000):
             # Generate random weights
             weights = np.random.random(len(self.tickers))
             weights /= np.sum(weights)
