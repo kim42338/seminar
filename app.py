@@ -4,14 +4,14 @@ import streamlit as st
 import plotly.graph_objects as go
 from PIL import Image
 import numpy as np
-
-from company import Company
-from pm import PM
-
 import requests
 from bs4 import BeautifulSoup
 import XlsxWriter
 from io import BytesIO
+
+from company import Company
+from pm import PM
+
 
 
 def create_stock_price_comparison_chart(tickers, start_input, end_input):
