@@ -6,7 +6,7 @@ from PIL import Image
 import numpy as np
 import requests
 from bs4 import BeautifulSoup
-import XlsxWriter
+# import XlsxWriter
 from io import BytesIO
 
 from company import Company
