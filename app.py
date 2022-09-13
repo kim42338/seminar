@@ -6,7 +6,6 @@ from PIL import Image
 import numpy as np
 import requests
 from bs4 import BeautifulSoup
-import XlsxWriter
 from io import BytesIO
 
 from company import Company
@@ -379,7 +378,7 @@ def create_rsi_chart(df, rsi):
 st.set_page_config(layout = 'wide')
 st.title('Financial Dashboard')
 st.sidebar.subheader('Financial Dashboard')
-option = st.sidebar.selectbox(label='Select an option:', options = [('Stock Price Comparison'), ('Financial Analysis'), ('Risk Tolerance'), ('Portfolio Management'), ('Financials')])
+option = st.sidebar.selectbox(label='Select an option:', options = [('Stock Price Comparison'), ('Financial Analysis'), ('Risk Tolerance'), ('Portfolio Management'), ('Download Financials'), ('Download Ratio Comparables')])
 
 
 #stock price comparison
@@ -565,47 +564,74 @@ if option == 'Portfolio Management':
         
         
 #download financials
-if option == 'Financials':
-    ticker_list = st.sidebar.multiselect(label='Enter Tickers to Download', options=Company.get_tickers(), help='Choose Multiple Firms to Download Financials')
+headers ={
+    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:87.0) Gecko/20100101 Firefox/87.0',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.5',
+    'Connection': 'keep-alive',
+    'Upgrade-Insecure-Requests': '1',
+    'Cache-Control': 'max-age=0'
+}
+
+
+if option == 'Download Financials':
+    ticker_input = st.sidebar.text_input(label='Enter Tickers to Download', help='Enter Ticker in ALL CAPS and Separate by Space')
+    ticker_list = ticker_input.split()
     search_button = st.sidebar.button('Search')
-    
+
     if search_button:
-        output = BytesIO()
-        workbook = xlsxwriter.Workbook(output, {'in_memory': True})
         comps = pd.DataFrame()
         financials = pd.DataFrame()
-
+        
         for comp in ticker_list:
-            urls = {}
-            urls['income-statement'] = f"https://stockanalysis.com/stocks/{comp}/financials/"
-            urls['balance-sheet'] = f"https://stockanalysis.com/stocks/{comp}/financials/balance-sheet/"
-            urls['cash-flow-statement'] = f"https://stockanalysis.com/stocks/{comp}/financials/cash-flow-statement/"
-            urls['ratios'] = f"https://stockanalysis.com/stocks/{comp}/financials/ratios/"
+            output = BytesIO()
+            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                urls = {}
+                urls['income-statement'] = f"https://stockanalysis.com/stocks/{comp}/financials/"
+                urls['balance-sheet'] = f"https://stockanalysis.com/stocks/{comp}/financials/balance-sheet/"
+                urls['cash-flow-statement'] = f"https://stockanalysis.com/stocks/{comp}/financials/cash-flow-statement/"
+                for key in urls.keys():
+                    response = requests.get(urls[key], headers=headers)
+                    soup = BeautifulSoup(response.content, 'html.parser')
+                    df = pd.read_html(str(soup), attrs={'class': 'svelte-17fayh1'})[0]
+                    df = df.iloc[: , :-1]
+                    df = df.reindex(list(range(0, 40))).reset_index(drop=True)
+                    financials = pd.concat([financials, df], axis=0)
 
-            for key in urls.keys():
-                response = requests.get(urls[key], headers=headers)
+                financials.to_excel(writer, sheet_name=f'financials_{comp}', index=False)
+                financials = None
+                writer.save()
+                st.download_button(label=f'Financials_{comp}', data=output, file_name=f'Financials_{comp}.xlsx')
+
+    
+if option == 'Download Ratio Comparables':
+    ticker_input = st.sidebar.text_input(label='Enter Tickers to Compare', help='Enter Ticker in ALL CAPS and Separate by Space')
+    ticker_list = ticker_input.split()
+    search_button = st.sidebar.button('Search')
+
+    if search_button:
+        comps = pd.DataFrame()
+        financials = pd.DataFrame()
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            for comp in ticker_list:
+            
+                url = f"https://stockanalysis.com/stocks/{comp}/financials/ratios/"
+                
+                response = requests.get(url, headers=headers)
                 soup = BeautifulSoup(response.content, 'html.parser')
                 df = pd.read_html(str(soup), attrs={'class': 'svelte-17fayh1'})[0]
                 df = df.iloc[: , :-1]
 
-                if key != 'ratios':
-                    df = df.reindex(list(range(0, 40))).reset_index(drop=True)
-                    financials = pd.concat([financials, df], axis=0)
+                name = df.iloc[:, 0]
+                data = df.iloc[:, 1]
+                name = name.rename('Current')
+                data = data.rename(comp)
+                ratio = pd.concat([name, data], axis=1)
+                comps = pd.concat([comps, ratio], axis=1)
 
-                if key == 'ratios':
-                    name = df.iloc[:, 0]
-                    data = df.iloc[:, 1]
-                    name = name.rename('Current')
-                    data = data.rename(comp)
-                    ratio = pd.concat([name, data], axis=1)
-                    comps = pd.concat([comps, ratio], axis=1)
-
-            financials.to_excel(output, sheet_name=f'financials', index=False)
-            processed_data = output.getvalue()
-            st.download_button(label=f'Download Financials_{comp}', data=processed_data, file_name=f'Financials_{comp}.xlsx')
-
-        comps = comps.loc[:,~comps.columns.duplicated()].copy()
-        comps.to_excel(output, sheet_name='comps', index=False)
-        processed_data = output.getvalue()
-        st.download_button(label='Download Ratio Comps', data=processed_data, file_name='Ratio_comps.xlsx')
+            comps = comps.loc[:,~comps.columns.duplicated()].copy()
+            comps.to_excel(writer, sheet_name='comps', index=False)
+            writer.save()
+            st.download_button(label='Comps Download', data=output, file_name='comps.xlsx')
 
