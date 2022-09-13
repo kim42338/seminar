@@ -8,6 +8,11 @@ import numpy as np
 from company import Company
 from pm import PM
 
+import requests
+from bs4 import BeautifulSoup
+import xlsxwriter
+from io import BytesIO
+
 
 def create_stock_price_comparison_chart(tickers, start_input, end_input):
     fig = go.Figure()
@@ -374,7 +379,7 @@ def create_rsi_chart(df, rsi):
 st.set_page_config(layout = 'wide')
 st.title('Financial Dashboard')
 st.sidebar.subheader('Financial Dashboard')
-option = st.sidebar.selectbox(label='Select an option:', options = [('Stock Price Comparison'), ('Financial Analysis'), ('Risk Tolerance'), ('Portfolio Management')])
+option = st.sidebar.selectbox(label='Select an option:', options = [('Stock Price Comparison'), ('Financial Analysis'), ('Risk Tolerance'), ('Portfolio Management'), ('Financials')])
 
 
 #stock price comparison
@@ -557,4 +562,50 @@ if option == 'Portfolio Management':
         st.subheader('Efficient Frontier')
         fig2 = create_efficient_frontier(returns, volatility, tolerance_adjusted_idx, idx)
         st.plotly_chart(fig2, use_container_width=True)
+        
+        
+#download financials
+if option == 'Financials':
+    ticker_list = st.sidebar.multiselect(label='Enter Tickers to Download', options=Company.get_tickers(), help='Choose Multiple Firms to Download Financials')
+    search_button = st.sidebar.button('Search')
+    
+    if search_button:
+        output = BytesIO()
+        workbook = xlsxwriter.Workbook(output, {'in_memory': True})
+        comps = pd.DataFrame()
+        financials = pd.DataFrame()
+
+        for comp in ticker_list:
+            urls = {}
+            urls['income-statement'] = f"https://stockanalysis.com/stocks/{comp}/financials/"
+            urls['balance-sheet'] = f"https://stockanalysis.com/stocks/{comp}/financials/balance-sheet/"
+            urls['cash-flow-statement'] = f"https://stockanalysis.com/stocks/{comp}/financials/cash-flow-statement/"
+            urls['ratios'] = f"https://stockanalysis.com/stocks/{comp}/financials/ratios/"
+
+            for key in urls.keys():
+                response = requests.get(urls[key], headers=headers)
+                soup = BeautifulSoup(response.content, 'html.parser')
+                df = pd.read_html(str(soup), attrs={'class': 'svelte-17fayh1'})[0]
+                df = df.iloc[: , :-1]
+
+                if key != 'ratios':
+                    df = df.reindex(list(range(0, 40))).reset_index(drop=True)
+                    financials = pd.concat([financials, df], axis=0)
+
+                if key == 'ratios':
+                    name = df.iloc[:, 0]
+                    data = df.iloc[:, 1]
+                    name = name.rename('Current')
+                    data = data.rename(comp)
+                    ratio = pd.concat([name, data], axis=1)
+                    comps = pd.concat([comps, ratio], axis=1)
+
+            financials.to_excel(output, sheet_name=f'financials', index=False)
+            processed_data = output.getvalue()
+            st.download_button(label=f'Download Financials_{comp}', data=processed_data, file_name=f'Financials_{comp}.xlsx')
+
+        comps = comps.loc[:,~comps.columns.duplicated()].copy()
+        comps.to_excel(output, sheet_name='comps', index=False)
+        processed_data = output.getvalue()
+        st.download_button(label='Download Ratio Comps', data=processed_data, file_name='Ratio_comps.xlsx')
 
